@@ -179,11 +179,14 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/addresses
 // @access  Private
 const getAddresses = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id);
+    // Use lean() to get plain JavaScript objects directly from MongoDB
+    const user = await User.findById(req.user._id).lean();
 
     if (!user) {
         return sendResponse(res, 404, false, 'User not found');
     }
+
+    console.log('📤 Fetching', (user.addresses || []).length, 'addresses from DB');
 
     sendResponse(res, 200, true, 'Addresses fetched successfully', {
         addresses: user.addresses || [],
@@ -194,11 +197,39 @@ const getAddresses = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/addresses
 // @access  Private
 const addAddress = asyncHandler(async (req, res) => {
+    console.log('📍 Add Address Request Body:', JSON.stringify(req.body, null, 2));
+
     const { addressType, fullName, phone, street, city, state, zipCode, country, isDefault } = req.body;
 
     // Validate required fields
     if (!fullName || !phone || !street || !city || !country) {
+        console.log('❌ Missing required fields:', { fullName: !!fullName, phone: !!phone, street: !!street, city: !!city, country: !!country });
         return sendResponse(res, 400, false, 'Please provide all required address fields');
+    }
+
+    // Validate field types and formats
+    if (typeof fullName !== 'string' || typeof phone !== 'string' || typeof street !== 'string' || typeof city !== 'string' || typeof country !== 'string') {
+        console.log('❌ Invalid field types:', {
+            fullName: typeof fullName,
+            phone: typeof phone,
+            street: typeof street,
+            city: typeof city,
+            country: typeof country
+        });
+        return sendResponse(res, 400, false, 'Invalid data format for address fields');
+    }
+
+    // Trim and validate fields
+    const trimmedData = {
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        street: street.trim(),
+        city: city.trim(),
+        country: country.trim()
+    };
+
+    if (!trimmedData.fullName || !trimmedData.phone || !trimmedData.street || !trimmedData.city || !trimmedData.country) {
+        return sendResponse(res, 400, false, 'Address fields cannot be empty or contain only whitespace');
     }
 
     const user = await User.findById(req.user._id);
@@ -219,22 +250,33 @@ const addAddress = asyncHandler(async (req, res) => {
 
     const newAddress = {
         addressType: addressType || 'home',
-        fullName,
-        phone,
-        street,
-        city,
-        state: state || '',
-        zipCode: zipCode || '',
-        country,
+        fullName: trimmedData.fullName,
+        phone: trimmedData.phone,
+        street: trimmedData.street,
+        city: trimmedData.city,
+        state: (state && typeof state === 'string') ? state.trim() : '',
+        zipCode: (zipCode && typeof zipCode === 'string') ? zipCode.trim() : '',
+        country: trimmedData.country,
         isDefault: shouldBeDefault,
     };
 
     user.addresses.push(newAddress);
     await user.save();
 
+    console.log('✅ Address added successfully. Total addresses:', user.addresses.length);
+
+    // Re-fetch user from database to get clean saved data
+    const updatedUser = await User.findById(req.user._id).lean();
+
+    if (!updatedUser) {
+        return sendResponse(res, 404, false, 'User not found after save');
+    }
+
+    console.log('📤 Returning', updatedUser.addresses.length, 'addresses from DB');
+
     sendResponse(res, 201, true, 'Address added successfully', {
-        addresses: user.addresses,
-        newAddress: user.addresses[user.addresses.length - 1],
+        addresses: updatedUser.addresses || [],
+        newAddress: updatedUser.addresses[updatedUser.addresses.length - 1],
     });
 });
 
@@ -243,7 +285,26 @@ const addAddress = asyncHandler(async (req, res) => {
 // @access  Private
 const updateAddress = asyncHandler(async (req, res) => {
     const { addressId } = req.params;
+    console.log('📍 Update Address Request:', { addressId, body: JSON.stringify(req.body, null, 2) });
+
     const { addressType, fullName, phone, street, city, state, zipCode, country, isDefault } = req.body;
+
+    // Validate field types if provided
+    if (fullName !== undefined && typeof fullName !== 'string') {
+        return sendResponse(res, 400, false, 'Invalid format for full name');
+    }
+    if (phone !== undefined && typeof phone !== 'string') {
+        return sendResponse(res, 400, false, 'Invalid format for phone');
+    }
+    if (street !== undefined && typeof street !== 'string') {
+        return sendResponse(res, 400, false, 'Invalid format for street');
+    }
+    if (city !== undefined && typeof city !== 'string') {
+        return sendResponse(res, 400, false, 'Invalid format for city');
+    }
+    if (country !== undefined && typeof country !== 'string') {
+        return sendResponse(res, 400, false, 'Invalid format for country');
+    }
 
     const user = await User.findById(req.user._id);
 
@@ -266,23 +327,41 @@ const updateAddress = asyncHandler(async (req, res) => {
         });
     }
 
-    // Update address fields
+    // Update address fields with trimmed values
     const address = user.addresses[addressIndex];
     address.addressType = addressType || address.addressType;
-    address.fullName = fullName || address.fullName;
-    address.phone = phone || address.phone;
-    address.street = street || address.street;
-    address.city = city || address.city;
-    address.state = state || address.state;
-    address.zipCode = zipCode || address.zipCode;
-    address.country = country || address.country;
+    address.fullName = fullName ? fullName.trim() : address.fullName;
+    address.phone = phone ? phone.trim() : address.phone;
+    address.street = street ? street.trim() : address.street;
+    address.city = city ? city.trim() : address.city;
+    address.state = state !== undefined ? (state && typeof state === 'string' ? state.trim() : '') : address.state;
+    address.zipCode = zipCode !== undefined ? (zipCode && typeof zipCode === 'string' ? zipCode.trim() : '') : address.zipCode;
+    address.country = country ? country.trim() : address.country;
     address.isDefault = isDefault !== undefined ? isDefault : address.isDefault;
+
+    // Validate that required fields are not empty after update
+    if (!address.fullName || !address.phone || !address.street || !address.city || !address.country) {
+        return sendResponse(res, 400, false, 'Address fields cannot be empty');
+    }
 
     await user.save();
 
+    console.log('✅ Address updated successfully');
+
+    // Re-fetch user from database to get clean saved data
+    const updatedUser = await User.findById(req.user._id).lean();
+
+    if (!updatedUser) {
+        return sendResponse(res, 404, false, 'User not found after save');
+    }
+
+    const updatedAddr = updatedUser.addresses.find(addr => addr._id.toString() === addressId);
+
+    console.log('📤 Returning', updatedUser.addresses.length, 'addresses from DB');
+
     sendResponse(res, 200, true, 'Address updated successfully', {
-        addresses: user.addresses,
-        updatedAddress: address,
+        addresses: updatedUser.addresses || [],
+        updatedAddress: updatedAddr,
     });
 });
 
@@ -316,8 +395,17 @@ const deleteAddress = asyncHandler(async (req, res) => {
 
     await user.save();
 
+    // Re-fetch user from database to get clean saved data
+    const updatedUser = await User.findById(req.user._id).lean();
+
+    if (!updatedUser) {
+        return sendResponse(res, 404, false, 'User not found after save');
+    }
+
+    console.log('📤 Returning', updatedUser.addresses.length, 'addresses from DB');
+
     sendResponse(res, 200, true, 'Address deleted successfully', {
-        addresses: user.addresses,
+        addresses: updatedUser.addresses || [],
     });
 });
 
@@ -348,8 +436,17 @@ const setDefaultAddress = asyncHandler(async (req, res) => {
 
     await user.save();
 
+    // Re-fetch user from database to get clean saved data
+    const updatedUser = await User.findById(req.user._id).lean();
+
+    if (!updatedUser) {
+        return sendResponse(res, 404, false, 'User not found after save');
+    }
+
+    console.log('📤 Returning', updatedUser.addresses.length, 'addresses from DB');
+
     sendResponse(res, 200, true, 'Default address updated', {
-        addresses: user.addresses,
+        addresses: updatedUser.addresses || [],
     });
 });
 

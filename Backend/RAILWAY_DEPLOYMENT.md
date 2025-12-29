@@ -40,9 +40,11 @@ AUTH_RATE_LIMIT_MAX=50
 ## Deployment Steps
 
 1. **Push Backend to GitHub** (Already done ✅)
+
    - Repository: https://github.com/danibutt9914-dev/full-stack
 
 2. **Create Railway Project**
+
    - Go to https://railway.app
    - Sign in with GitHub
    - Click "New Project"
@@ -51,12 +53,14 @@ AUTH_RATE_LIMIT_MAX=50
    - Set root directory: `/Backend`
 
 3. **Add Environment Variables**
+
    - In Railway dashboard, click on your service
    - Go to "Variables" tab
    - Add all variables listed above
    - **Important**: Update FRONTEND_URL after deploying to Vercel
 
 4. **Deploy**
+
    - Railway will auto-deploy
    - Wait for build to complete
    - Copy your Railway URL (e.g., `https://your-app.up.railway.app`)
@@ -66,6 +70,7 @@ AUTH_RATE_LIMIT_MAX=50
    - Railway will auto-redeploy
 
 ## Your Railway URL
+
 After deployment, your backend will be at:
 `https://[your-service-name].up.railway.app`
 

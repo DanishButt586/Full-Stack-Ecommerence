@@ -48,6 +48,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({
     label: 'Home',
+    addressType: 'home',
     fullName: '',
     phone: '',
     address: '',
@@ -449,32 +450,49 @@ const Dashboard = ({ user, onLogout }) => {
     setAddressFormErrors({});
 
     try {
+      // Ensure all values are strings and properly formatted
       const addressData = {
-        addressType: addressForm.addressType || 'home',
-        fullName: addressForm.fullName,
-        phone: addressForm.phone,
-        street: addressForm.address,
-        city: addressForm.city,
-        state: addressForm.state || '',
-        zipCode: addressForm.postalCode || '',
-        country: addressForm.country || 'United States',
-        isDefault: addressForm.isDefault || false
+        addressType: String(addressForm.addressType || addressForm.label?.toLowerCase() || 'home'),
+        fullName: String(addressForm.fullName || '').trim(),
+        phone: String(addressForm.phone || '').trim(),
+        street: String(addressForm.address || '').trim(),
+        city: String(addressForm.city || '').trim(),
+        state: String(addressForm.state || '').trim(),
+        zipCode: String(addressForm.postalCode || '').trim(),
+        country: String(addressForm.country || 'Pakistan').trim(),
+        isDefault: Boolean(addressForm.isDefault)
       };
 
+      // Double-check that required fields are not empty after trimming
+      if (!addressData.fullName || !addressData.phone || !addressData.street || !addressData.city || !addressData.country) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+      }
+
+      console.log('Saving address data:', addressData);
       let response;
       
       if (editingAddress) {
         // Update existing address
         response = await updateAddress(editingAddress._id, addressData);
+        console.log('Update response:', response);
         showNotification('Address updated successfully', 'success');
       } else {
         // Add new address
         response = await addAddress(addressData);
+        console.log('Add response:', response);
         showNotification('Address added successfully', 'success');
       }
 
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         setAddresses(response.data.addresses || []);
+      } else {
+        console.warn('Response missing expected data:', response);
+        // Refresh addresses list to ensure we have latest data
+        const addressesData = await getAddresses();
+        if (addressesData && addressesData.success && addressesData.data) {
+          setAddresses(addressesData.data.addresses || []);
+        }
       }
 
       setShowAddressModal(false);
@@ -482,6 +500,11 @@ const Dashboard = ({ user, onLogout }) => {
       resetAddressForm();
     } catch (error) {
       console.error('Error saving address:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       showNotification(error.message || 'Failed to save address', 'error');
     }
   };
@@ -538,6 +561,7 @@ const Dashboard = ({ user, onLogout }) => {
   const resetAddressForm = () => {
     setAddressForm({
       label: 'Home',
+      addressType: 'home',
       fullName: user?.name || '',
       phone: '',
       address: '',

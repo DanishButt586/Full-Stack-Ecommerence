@@ -83,8 +83,21 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Body parsing middleware with error handling
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// JSON parsing error handler
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error('❌ JSON Parse Error:', err.message);
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid JSON format in request body'
+        });
+    }
+    next(err);
+});
 
 // Session middleware (required for passport)
 app.use(session({

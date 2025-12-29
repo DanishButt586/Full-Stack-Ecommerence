@@ -9,6 +9,17 @@ const sendResponse = (res, statusCode, success, message, data = null) => {
         response.data = data;
     }
 
+    // Log the response being sent (for debugging)
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('📤 Sending response:', {
+            statusCode,
+            success,
+            message,
+            dataKeys: data ? Object.keys(data) : null,
+            hasAddresses: data?.addresses ? `${data.addresses.length} addresses` : 'N/A'
+        });
+    }
+
     return res.status(statusCode).json(response);
 };
 

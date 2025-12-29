@@ -26,32 +26,84 @@ export const getAddresses = async () => {
 
 // Add new address
 export const addAddress = async (addressData) => {
-    const response = await fetch(`${API_URL}/auth/addresses`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(addressData),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.message || 'Failed to add address');
+    try {
+        console.log('📍 Adding address with data:', addressData);
+        const bodyData = JSON.stringify(addressData);
+        console.log('📍 Stringified body:', bodyData);
+
+        const response = await fetch(`${API_URL}/auth/addresses`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: bodyData,
+        });
+
+        console.log('📍 Response status:', response.status, response.statusText);
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned invalid response format');
+        }
+
+        const data = await response.json();
+        console.log('📍 Response data:', data);
+
+        if (!response.ok) {
+            console.error('❌ Add address failed:', data);
+            throw new Error(data.message || 'Failed to add address');
+        }
+
+        console.log('✅ Address added successfully');
+        return data;
+    } catch (error) {
+        console.error('❌ Error in addAddress:', error);
+        if (error instanceof SyntaxError) {
+            throw new Error('Invalid data format. Please check your address information.');
+        }
+        throw error;
     }
-    return data;
 };
 
 // Update address
 export const updateAddress = async (addressId, addressData) => {
-    const response = await fetch(`${API_URL}/auth/addresses/${addressId}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(addressData),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.message || 'Failed to update address');
+    try {
+        console.log('📍 Updating address:', addressId, 'with data:', addressData);
+        const bodyData = JSON.stringify(addressData);
+        console.log('📍 Stringified body:', bodyData);
+
+        const response = await fetch(`${API_URL}/auth/addresses/${addressId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: bodyData,
+        });
+
+        console.log('📍 Response status:', response.status, response.statusText);
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned invalid response format');
+        }
+
+        const data = await response.json();
+        console.log('📍 Response data:', data);
+
+        if (!response.ok) {
+            console.error('❌ Update address failed:', data);
+            throw new Error(data.message || 'Failed to update address');
+        }
+
+        console.log('✅ Address updated successfully');
+        return data;
+    } catch (error) {
+        console.error('❌ Error in updateAddress:', error);
+        if (error instanceof SyntaxError) {
+            throw new Error('Invalid data format. Please check your address information.');
+        }
+        throw error;
     }
-    return data;
 };
 
 // Delete address
