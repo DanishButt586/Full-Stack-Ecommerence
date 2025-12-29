@@ -1,0 +1,23 @@
+# Render.com Backend Configuration
+# This file tells Render how to deploy your backend
+
+# Build Command
+npm install
+
+# Start Command
+npm start
+
+# Environment Variables (Set these in Render Dashboard):
+# PORT=5000
+# MONGODB_URI=your_mongodb_atlas_uri
+# MONGO_URI=your_mongodb_atlas_uri
+# NODE_ENV=production
+# JWT_SECRET=your_jwt_secret
+# JWT_EXPIRE=30d
+# SESSION_SECRET=your_session_secret
+# FRONTEND_URL=https://your-frontend-url.vercel.app
+# GOOGLE_CLIENT_ID=your_google_client_id
+# GOOGLE_CLIENT_SECRET=your_google_client_secret
+# STRIPE_SECRET_KEY=your_stripe_secret
+# STRIPE_PUBLISHABLE_KEY=your_stripe_public
+# STRIPE_WEBHOOK_SECRET=your_webhook_secret
